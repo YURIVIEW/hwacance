@@ -260,11 +260,12 @@
   .roles button span { font-size: 16px; font-family: var(--font-title); }
   .roles button[aria-pressed="true"] { border-color: var(--lav-deep); background: var(--lav); }
   .nickrow { display: flex; gap: 8px; }
-  .nickrow input {
+  .nickrow input {   /* 닉네임은 🎲 조합만 — 직접 입력은 받지 않고 보여 주기만 */
     flex: 1; min-width: 0; font: inherit; font-size: 18px; color: var(--ink);
     background: transparent; border: 1.5px solid var(--line); border-radius: 14px; padding: 11px 13px;
-    -webkit-user-select: text; user-select: text;
+    cursor: default; outline: none;
   }
+  .field > label small { font-size: 12px; opacity: .8; }
   .nickrow button {
     width: 50px; border: 1.5px solid var(--line); background: var(--butter); border-radius: 14px; font-size: 22px;
   }
@@ -404,9 +405,9 @@
       </div>
     </div>
     <div class="field">
-      <label for="nick">닉네임</label>
+      <label for="nick">닉네임 <small>· 🎲를 누르면 바뀌어요</small></label>
       <div class="nickrow">
-        <input id="nick" maxlength="8" autocomplete="off" spellcheck="false">
+        <input id="nick" readonly tabindex="-1" autocomplete="off" spellcheck="false">
         <button id="dice" aria-label="닉네임 다시 뽑기">🎲</button>
       </div>
     </div>
@@ -1265,7 +1266,10 @@ const nickInput = $('#nick');
 const enterBtn = $('#enterBtn');
 const roleBtns = document.querySelectorAll('.roles button');
 const saved = store.get('hwacance.profile');
-nickInput.value = (saved && saved.nickname) || randomNick();
+const isDiceNick = (n) => typeof n === 'string' && FRONT.some((f) => n.startsWith(f) && BACK.includes(n.slice(f.length)));
+const savedPub = saved && Array.isArray(saved.pub) && saved.pub[0] >= 0 && saved.pub[0] < FRONT.length && saved.pub[1] >= 0 && saved.pub[1] < BACK.length
+  ? FRONT[saved.pub[0]] + BACK[saved.pub[1]] : null;
+nickInput.value = saved && isDiceNick(saved.nickname) ? saved.nickname : savedPub || randomNick();
 
 // 옷·슬리퍼 색 고르기 — 고른 모습을 작은 화면으로 보여 줌. 옷을 안 고르면 엄마/아빠 기본색
 const okIdx = (v, n) => Number.isInteger(v) && v >= 0 && v < n;
@@ -1338,15 +1342,14 @@ $('#dice').addEventListener('click', () => { initAudio(); sfx.tap(); nickInput.v
 enterBtn.addEventListener('click', () => {
   if (!app.role) return;
   initAudio();
-  let nick = nickInput.value.trim().slice(0, 8);
-  if (!nick) nick = randomNick();
+  let nick = nickInput.value;
+  if (!isDiceNick(nick)) nick = randomNick();
   nickInput.value = nick;
   app.nickname = nick;
-  // 남에게 보이는 닉네임은 🎲 조합만 (직접 고친 닉네임은 엔딩 카드에만). 직접 고친 닉네임이면 대신 쓸 조합을 저장해 두고 계속 씀
-  const keep = saved && saved.nickname === nick && Array.isArray(saved.pub) && okIdx(saved.pub[0], FRONT.length) && okIdx(saved.pub[1], BACK.length);
-  app.nickIdx = keep ? saved.pub : nickIndex(nick);
-  app.publicNick = FRONT[app.nickIdx[0]] + BACK[app.nickIdx[1]];
-  store.set('hwacance.profile', { role: app.role, nickname: nick, shirt: app.look.shirt, slipper: app.look.slipper, pub: app.nickIdx });
+  // 닉네임은 🎲 조합만이라 내 머리 위·다른 사람 화면·엔딩 카드가 모두 같은 이름 (서버에는 앞말·뒷말 번호로 보냄)
+  app.nickIdx = nickIndex(nick);
+  app.publicNick = nick;
+  store.set('hwacance.profile', { role: app.role, nickname: nick, shirt: app.look.shirt, slipper: app.look.slipper });
   app.look = { shirt: shirtOf(), slipper: app.look.slipper };   // 이후 내 캐릭터가 쓰는 확정 색
   netConnect();
   track('rest_start', { role: app.role });   // 들어가기
