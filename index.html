@@ -18,6 +18,12 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="화장실 칸에 앉아 책을 읽는 엄마와 꾸벅 조는 아빠 캐릭터">
 <meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="화캉스">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9A%BD%3C/text%3E%3C/svg%3E">
 <!-- 구글 애널리틱스(GA4): GA_ID에 측정 ID(G-로 시작)를 넣으면 공개 주소(github.io)에서만 켜짐. 비어 있으면 아무것도 보내지 않음 -->
 <script>
@@ -121,7 +127,7 @@
   /* 안내 토스트 */
   .toast {
     position: fixed; left: 12px; right: 12px; margin: 0 auto; width: fit-content; max-width: 420px;
-    top: calc(env(safe-area-inset-top, 0px) + 62px); z-index: 25; text-align: center;
+    top: calc(env(safe-area-inset-top, 0px) + 62px); z-index: 45; text-align: center;   /* 엔딩·확인 창 위에도 보이게 */
     transform: translateY(-6px); opacity: 0; visibility: hidden; transition: opacity .3s, transform .3s, visibility 0s .3s;
     background: var(--hud); border: 1px solid var(--line); border-radius: 14px;
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -321,6 +327,11 @@
     -webkit-touch-callout: default; -webkit-user-select: auto; user-select: auto;
   }
   .ending p { margin: 0; font-size: 13px; color: var(--ink-soft); }
+  .linkish {
+    background: none; border: 0; padding: 8px 10px; min-height: 40px; font-size: 14px; color: var(--ink);
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .linkish[hidden] { display: none; }
   .ending .row { display: flex; gap: 8px; }
 
   /* 나가기 확인 창 */
@@ -384,7 +395,7 @@
 
 <section id="start" class="start">
   <div class="card">
-    <div class="sign"><span class="dot"></span>지금 비어있음</div>
+    <div class="sign"><span class="dot"></span><span id="signText">지금 비어있음</span></div>
     <h1>화캉스</h1>
     <p class="sub">엄빠들의 비밀 쉼터</p>
     <div class="field">
@@ -422,6 +433,7 @@
     <button id="saveBtn" class="ghost">이미지 저장</button>
     <button id="againBtn" class="primary">한 번 더 쉬기</button>
   </div>
+  <button id="installBtn" class="linkish" hidden>📲 홈 화면에 두면 더 빨리 와요</button>
 </section>
 <div id="kid" class="kid" role="status" aria-live="polite"><small>문 밖에서</small><span></span></div>
 <div id="kidChoice" class="choice" hidden>
@@ -1788,6 +1800,18 @@ function updateNpcEvents(now) {
 const SERVER_URL = 'wss://hwacance.yuriview.workers.dev/ws';
 const IS_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 const NET_URL = new URLSearchParams(location.search).get('server') || SERVER_URL || (IS_LOCAL ? 'ws://localhost:8787/ws' : '');
+// 지금 쉬는 사람 수·오늘 화캉스 횟수 (서버 /stats). 서버가 없거나 늦으면 null
+const STATS_URL = NET_URL ? NET_URL.replace(/^ws/, 'http').replace(/\/ws$/, '/stats') : '';
+async function fetchStats(ms = 3000) {
+  if (!STATS_URL) return null;
+  const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), ms);
+  try { const r = await fetch(STATS_URL, { signal: ctrl.signal, cache: 'no-store' }); return r.ok ? await r.json() : null; }
+  catch (e) { return null; } finally { clearTimeout(t); }
+}
+fetchStats().then((st) => {   // 시작 화면 문 표시: "지금 비어있음" → "지금 3명 쉬는 중"
+  const el = document.getElementById('signText');
+  if (el && st && st.now > 0) el.textContent = `지금 ${st.now}명 쉬는 중`;
+});
 const net = { ws: null, state: 'off', me: null, claim: null, sent: { a: null, k: null }, sentAt: 0, lastKnock: null, mv: { x: 0, z: 0, r: 0, m: '', at: 0 } };   // state: off | connecting | on
 app.net = net;
 function netSend(m) { if (net.ws && net.ws.readyState === 1) net.ws.send(JSON.stringify(m)); }
@@ -2118,17 +2142,29 @@ function updateKid(now) {
 }
 
 /* ---------- 거울과 엔딩 카드 ---------- */
+// 오늘의 거울 한마디 — 한국 날짜 기준으로 하루에 하나, 모두에게 같은 문구
+const MIRROR_LINES = [
+  '자, 다시 육아 출근', '오늘도 잘 버텼어요', '물 한 잔 마시고 가요', '어깨 한 번 쭉 펴요', '숨 한 번 크게 쉬고',
+  '완벽하지 않아도 돼요', '조금 쉬어도 괜찮아요', '오늘의 나, 칭찬해', '웃는 얼굴 장전 완료', '3분 충전 완료',
+  '잘하고 있어요, 진짜로', '오늘도 고생 많았어요', '나머지는 내일의 나에게', '쉬는 엄빠가 웃는 엄빠', '다녀오세요, 엄빠!',
+  '아이도 나도 소중해요', '퇴근까지 조금만 더', '오늘 하루도 응원해요', '따뜻한 거 하나 챙겨요', '토닥토닥, 수고했어요',
+];
+const kstDayIndex = () => Math.floor((Date.now() + 9 * 3600e3) / 86400e3);
+const mirrorLine = () => MIRROR_LINES[kstDayIndex() % MIRROR_LINES.length];
 const mirrorTex = canvasTex(1024, 256, () => {});
 function drawMirrorText() {
-  const { canvas: c, g } = mirrorTex.userData;
+  const { canvas: c, g } = mirrorTex.userData, line = mirrorLine();
   g.clearRect(0, 0, c.width, c.height);
   g.fillStyle = '#22344A';
-  g.font = '120px "Jua", "Apple SD Gothic Neo", sans-serif';
+  let size = 120;   // 긴 문구는 거울 폭에 맞게 줄임
+  do { g.font = `${size}px "Jua", "Apple SD Gothic Neo", sans-serif`; size -= 6; } while (g.measureText(line).width > c.width - 60 && size > 60);
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText('자, 다시 육아 출근', c.width / 2, c.height / 2 + 6);
+  g.fillText(line, c.width / 2, c.height / 2 + 6);
   mirrorTex.needsUpdate = true;
 }
 drawMirrorText();
+// 웹폰트 조각은 글자별로 받아지므로 오늘 문구의 글자를 넘겨 받은 뒤 다시 그림
+if (document.fonts) document.fonts.load('120px "Jua"', mirrorLine()).then(drawMirrorText).catch(() => {});
 const mirrorText = plane(0.82, 0.205, new THREE.MeshBasicMaterial({ map: mirrorTex, transparent: true, opacity: 0, depthWrite: false }),
   -ROOM.x + 0.025, 1.64, 3.6);
 mirrorText.rotation.y = Math.PI / 2;
@@ -2143,7 +2179,7 @@ function fmtDuration(secs) { const m = Math.floor(secs / 60), r = secs % 60; ret
 function pickTitle(secs, st) {
   if (st.hidden >= 2) return '숨바꼭질 고수';
   if (st.caught >= 3) return `인기 만점 ${roleWord()}`;
-  if (st.tiles >= 50) return '천장 감별사';
+  if (st.tiles >= 50) return '바닥 감별사';
   if (st.tissueGiven >= 2) return '휴지 천사';
   if (st.knocks >= 3) return '노크 장인';
   if (secs >= 300) return '프로 화캉서';
@@ -2176,7 +2212,7 @@ function fitFont(g, text, family, size, maxW, min = 36) {
 async function renderCard(info) {
   // 한글 웹폰트는 글자 범위별로 나뉘어 필요한 조각만 받아짐 → 카드에 쓸 글자를 넘겨 그 조각을 다 받은 뒤 그림
   // (글자를 안 넘기면 일부 글자만 기본 글꼴로 그려져 굵기·모양이 섞임)
-  const text = ['화캉스 엄빠들의 비밀 쉼터 지금 비어있음', info.nameLine, info.time, info.title, info.date, ...info.rows.flat()].join(' ');
+  const text = ['화캉스 엄빠들의 비밀 쉼터 지금 비어있음', info.nameLine, info.time, info.title, info.date, info.today || '', ...info.rows.flat()].join(' ');
   try { await Promise.all([document.fonts.load('100px "Jua"', text), document.fonts.load('40px "Gowun Dodum"', text)]); } catch (e) {}
   const W = 1080, H = 1920;
   const c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -2222,8 +2258,9 @@ async function renderCard(info) {
     if (val) { g.font = `58px ${JUA}`; g.textAlign = 'right'; g.fillText(val, Rx, y + 2); g.textAlign = 'left'; }
     y += 100;
   }
-  // 날짜
+  // 날짜 (+ 오늘 화캉스 횟수)
   g.textBaseline = 'alphabetic'; g.textAlign = 'center';
+  if (info.today) { g.fillStyle = '#5B6B7C'; g.font = `38px ${GD}`; g.fillText(info.today, W / 2, H - 210); }
   g.fillStyle = '#22344A'; g.font = `40px ${GD}`; g.fillText(info.date, W / 2, H - 150);
   g.textAlign = 'left';
   const url = c.toDataURL('image/png');
@@ -2231,17 +2268,21 @@ async function renderCard(info) {
   return { url, blob };
 }
 async function runEnding() {
+  const statsP = fetchStats(2500);   // 오늘 화캉스 횟수 (거울 장면 동안 받아 둠)
   netClose();   // 엔딩에서 방을 나감. "다시"를 누르면 새로 접속
   sfx.wash();
   await wait(700);
   tween(0, 0.9, (k) => { mirrorText.material.opacity = k; });
   await wait(2300);
   const info = buildEndingInfo(), st = app.lastRun.stats;
+  const stats = await statsP;
+  if (stats && stats.today > 0) info.today = `오늘 ${stats.today.toLocaleString('ko-KR')}번의 화캉스가 있었어요`;
   track('rest_finish', { seconds: app.lastRun.secs, badge: info.title, knocks: st.knocks || 0, tissue: (st.tissueGiven || 0) + (st.tissueGot || 0), caught: st.caught || 0 });   // 물 내리고 끝까지
   const { url, blob } = await renderCard(info);
   endingBlob = blob;
   endingImg.src = url;
   endingEl.hidden = false;
+  installBtn.hidden = isStandalone();   // 이미 홈 화면 앱으로 열었으면 안 보임
 }
 
 // 이미지 저장: claude.ai 안에서는 downloads 기능, 그 밖에서는 일반 내려받기
@@ -2511,6 +2552,32 @@ function updateCorridorUI() {
   if (on && me.ch) doorHint();
   if (!on) { me.goal = null; if (joy.id !== null) endJoy(); }
 }
+
+/* ---------- 홈 화면에 두기 (앱처럼 설치) ---------- */
+const installBtn = $('#installBtn');
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+let installPrompt = null;   // 안드로이드 크롬 등: 바로 설치 창을 띄울 수 있음
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installPrompt = e; });
+window.addEventListener('appinstalled', () => { installBtn.hidden = true; track('app_installed'); toast('홈 화면에 화캉스를 두었어요', 2400); });
+installBtn.addEventListener('click', async () => {
+  sfx.tap();
+  if (installPrompt) {
+    installPrompt.prompt();
+    const r = await installPrompt.userChoice.catch(() => null);
+    track('install_click', { way: 'prompt', result: (r && r.outcome) || 'unknown' });
+    installPrompt = null;
+    return;
+  }
+  // 설치 창을 띄울 수 없는 곳은 방법을 안내
+  const ua = navigator.userAgent;
+  const msg = /KAKAOTALK/i.test(ua) ? '카톡 안에서는 안 돼요. 오른쪽 아래 ⋯ → 다른 브라우저로 열기 → 홈 화면에 추가'
+    : /iPhone|iPad|iPod/.test(ua) ? '아래 공유 버튼(⬆︎) → 홈 화면에 추가를 눌러 주세요'
+    : '브라우저 메뉴(⋮) → 홈 화면에 추가를 눌러 주세요';
+  track('install_click', { way: 'guide' });
+  toast(msg, 6000);
+});
+if (new URLSearchParams(location.search).get('src') === 'homescreen') track('open_from_home');   // 홈 화면 아이콘으로 들어옴
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---------- 칸 들어가기 / 나가기 ---------- */
 const stallUI = $('#stallUI');
