@@ -322,7 +322,7 @@
   }
   .ending[hidden] { display: none; }
   .ending img {
-    display: block; max-width: 100%; max-height: calc(100% - 110px); width: auto; height: auto;
+    display: block; max-width: 100%; max-height: calc(100% - 150px); width: auto; height: auto;   /* 아래 버튼 줄 + 링크 두 줄 자리 */
     border-radius: 22px; box-shadow: 0 18px 50px -20px rgba(34, 52, 74, .5);
     -webkit-touch-callout: default; -webkit-user-select: auto; user-select: auto;
   }
@@ -333,6 +333,60 @@
   }
   .linkish[hidden] { display: none; }
   .ending .row { display: flex; gap: 8px; }
+
+  /* 쉼 기록 달력 + 칭호 도감 */
+  .records {
+    position: fixed; inset: 0; z-index: 42; display: flex; overflow-y: auto;
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 14px calc(env(safe-area-inset-bottom, 0px) + 16px);
+    background: rgba(20, 28, 36, .38);
+  }
+  .records[hidden] { display: none; }
+  .records .card { margin: auto; padding: 20px 18px 16px; }
+  .rec-head { display: flex; justify-content: space-between; align-items: center; }
+  .records h2, .records h3 { font-family: var(--font-title); font-weight: 400; margin: 0; }
+  .records h2 { font-size: 26px; }
+  .records h3 { font-size: 20px; margin: 18px 0 10px; }
+  .records h3 small { font-family: var(--font-body); font-size: 13px; color: var(--ink-soft); }
+  #recClose { width: 40px; height: 40px; padding: 0; font-size: 16px; display: grid; place-items: center; }
+  .rec-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 14px 0 12px; }
+  .rec-sum div { background: var(--page); border-radius: 14px; padding: 8px 4px; text-align: center; }
+  .rec-sum strong { display: block; font-family: var(--font-title); font-weight: 400; font-size: 21px; white-space: nowrap; }
+  .rec-sum span { font-size: 12px; color: var(--ink-soft); }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .cal-nav button { width: 36px; height: 36px; padding: 0; border: 0; background: transparent; font-size: 22px; color: var(--ink); border-radius: 50%; }
+  .cal-nav button:disabled { opacity: .2; }
+  .cal-nav strong { font-family: var(--font-title); font-weight: 400; font-size: 18px; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; }
+  .cal .wd { font-size: 11px; color: var(--ink-soft); padding: 2px 0; }
+  .cal .d { aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; font-size: 13px; position: relative; font-variant-numeric: tabular-nums; }
+  .cal .d.on { background: var(--vacant); color: #fff; }
+  .cal .d.today { box-shadow: inset 0 0 0 1.5px var(--lav-deep); }
+  .cal .d b {
+    position: absolute; right: -3px; top: -3px; font-size: 10px; font-weight: 400; line-height: 15px;
+    background: var(--lav-deep); color: var(--card); border-radius: 8px; padding: 0 4px;
+  }
+  .badges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .bdg {
+    background: var(--page); border-radius: 14px; padding: 8px 2px 6px; text-align: center; min-height: 86px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .bdg i { font-style: normal; font-size: 24px; line-height: 1.2; }
+  .bdg span { font-size: 11.5px; line-height: 1.25; word-break: keep-all; }
+  .bdg small { font-size: 10.5px; line-height: 1.2; color: var(--ink-soft); word-break: keep-all; }
+  .bdg.locked i { filter: grayscale(1); opacity: .3; }
+  .bdg.locked span { color: var(--ink-soft); }
+  .bdg.new { box-shadow: inset 0 0 0 2px var(--lav-deep); }
+  .rec-note { margin: 14px 0 0; text-align: center; font-size: 12px; color: var(--ink-soft); }
+  .has-new { position: relative; }
+  .has-new::after { content: ""; position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--occupied); }
+  .links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; }
+  .start .links { margin-top: 6px; }
+  .ending .links { margin-top: -8px; }
+  .invite-note {
+    margin: 0 0 12px; padding: 10px 12px; border-radius: 14px; background: var(--lav); color: var(--ink);
+    font-size: 14px; text-align: center;
+  }
+  .invite-note[hidden] { display: none; }
 
   /* 나가기 확인 창 */
   .sheet {
@@ -422,7 +476,23 @@
         <button id="dice" aria-label="닉네임 다시 뽑기">🎲</button>
       </div>
     </div>
+    <p id="inviteNote" class="invite-note" hidden>👫 초대받았어요! 들어가면 같은 화장실에서 만나요</p>
     <button id="enterBtn" class="primary big" disabled>엄마나 아빠를 골라 주세요</button>
+    <div class="links">
+      <button id="startRecBtn" class="linkish" hidden>📅 내 쉼 기록</button>
+      <button id="inviteBtn" class="linkish">👫 옆 칸에 초대하기</button>
+    </div>
+  </div>
+</section>
+<section id="records" class="records" role="dialog" aria-modal="true" aria-labelledby="recTitle" hidden>
+  <div class="card">
+    <div class="rec-head"><h2 id="recTitle">내 쉼 기록</h2><button id="recClose" class="pill" aria-label="닫기">✕</button></div>
+    <div class="rec-sum" id="recSum"></div>
+    <div class="cal-nav"><button id="calPrev" aria-label="지난달">‹</button><strong id="calMonth"></strong><button id="calNext" aria-label="다음 달">›</button></div>
+    <div class="cal" id="cal"></div>
+    <h3>칭호 도감 <small id="badgeCount"></small></h3>
+    <div class="badges" id="badges"></div>
+    <p class="rec-note">기록은 이 폰(브라우저)에만 저장돼요</p>
   </div>
 </section>
 
@@ -431,9 +501,13 @@
   <p>이미지를 길게 눌러 저장할 수도 있어요</p>
   <div class="row">
     <button id="saveBtn" class="ghost">이미지 저장</button>
+    <button id="recordsBtn" class="ghost" aria-label="내 쉼 기록과 칭호 도감">📅 기록</button>
     <button id="againBtn" class="primary">한 번 더 쉬기</button>
   </div>
-  <button id="installBtn" class="linkish" hidden>📲 홈 화면에 두면 더 빨리 와요</button>
+  <div class="links">
+    <button id="inviteBtn2" class="linkish">👫 옆 칸에 초대하기</button>
+    <button id="installBtn" class="linkish" hidden>📲 홈 화면에 두면 더 빨리 와요</button>
+  </div>
 </section>
 <div id="kid" class="kid" role="status" aria-live="polite"><small>문 밖에서</small><span></span></div>
 <div id="kidChoice" class="choice" hidden>
@@ -1825,8 +1899,12 @@ function netConnect() {
   let ws;
   try { ws = new WebSocket(NET_URL); } catch (e) { return; }
   net.ws = ws; net.state = 'connecting';
-  net.giveUp = setTimeout(() => { if (net.ws === ws && net.state === 'connecting') netClose(); }, 3000);   // 3초 안에 방 배정이 안 되면 혼자 모드
-  ws.onopen = () => netSend({ t: 'hi', v: 2, role: app.role, nick: app.nickIdx, sh: app.look.shirt, sl: app.look.slipper, x: r2(me.x), z: r2(me.z), r: r2(me.r) });
+  net.giveUp = setTimeout(() => {   // 3초 안에 방 배정이 안 되면 혼자 모드
+    if (net.ws !== ws || net.state !== 'connecting') return;
+    netClose();
+    if (app.invite) toast('연결이 안 돼서 이번엔 같은 화장실로 못 갔어요', 3200);
+  }, 3000);
+  ws.onopen = () => netSend({ t: 'hi', v: 2, role: app.role, nick: app.nickIdx, sh: app.look.shirt, sl: app.look.slipper, x: r2(me.x), z: r2(me.z), r: r2(me.r), ...(app.invite ? { inv: app.invite } : {}) });
   ws.onmessage = (e) => {
     if (net.ws !== ws || e.data === 'o') return;
     let m;
@@ -1876,6 +1954,8 @@ function netOnMessage(m) {
     clearTimeout(net.giveUp);
     net.state = 'on'; net.me = m.me;
     track('multi_join', { people: 1 + (m.walk || []).length + m.stalls.filter((p) => p && !p.npc).length });   // 다중 접속 성공 (방 인원)
+    if (m.inv === 'full') { track('invite_full'); setTimeout(() => toast('같이 쉬기로 한 화장실이 꽉 차서 옆 화장실로 왔어요', 3600), 2800); }
+    else if (m.inv) setTimeout(() => toast('👫 같이 쉬기로 한 화장실이에요. 옆 칸에서 만나요', 3200), 2800);
     for (const j of [...npcs.keys()]) removeOccupant(j);
     m.stalls.forEach((p, j) => { if (p && j !== app.stall) addOccupant(j, p.npc ? {} : p); });
     for (const id of [...walkers.keys()]) removeWalker(id);
@@ -2176,16 +2256,7 @@ function mirrorPose() {
 const endingEl = $('#ending'), endingImg = $('#endingImg');
 let endingBlob = null;
 function fmtDuration(secs) { const m = Math.floor(secs / 60), r = secs % 60; return m ? `${m}분 ${r}초` : `${r}초`; }
-function pickTitle(secs, st) {
-  if (st.hidden >= 2) return '숨바꼭질 고수';
-  if (st.caught >= 3) return `인기 만점 ${roleWord()}`;
-  if (st.tiles >= 50) return '바닥 감별사';
-  if (st.tissueGiven >= 2) return '휴지 천사';
-  if (st.knocks >= 3) return '노크 장인';
-  if (secs >= 300) return '프로 화캉서';
-  if (secs < 60) return '번개 화캉스';
-  return '평화로운 휴가객';
-}
+function pickTitle(secs, st) { return badgeName(badgeOf(pickBadge(secs, st))); }
 function buildEndingInfo() {
   const { secs, stats: st } = app.lastRun;
   const rows = [];
@@ -2201,6 +2272,7 @@ function buildEndingInfo() {
     nameLine: `${app.role === 'dad' ? '👨' : '👩'} ${app.nickname}님의 화캉스`,
     time: fmtDuration(secs),
     title: pickTitle(secs, st),
+    badge: pickBadge(secs, st),
     rows,
     date: `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`,
   };
@@ -2277,13 +2349,173 @@ async function runEnding() {
   const info = buildEndingInfo(), st = app.lastRun.stats;
   const stats = await statsP;
   if (stats && stats.today > 0) info.today = `오늘 ${stats.today.toLocaleString('ko-KR')}번의 화캉스가 있었어요`;
+  const saved = saveRecord(app.lastRun.secs, info.badge);   // 달력·도감에 남김
+  rec.newBadge = saved.isNew ? info.badge : null;
+  $('#recordsBtn').classList.toggle('has-new', saved.isNew);
+  startRecBtn.hidden = false;
   track('rest_finish', { seconds: app.lastRun.secs, badge: info.title, knocks: st.knocks || 0, tissue: (st.tissueGiven || 0) + (st.tissueGot || 0), caught: st.caught || 0 });   // 물 내리고 끝까지
   const { url, blob } = await renderCard(info);
   endingBlob = blob;
   endingImg.src = url;
   endingEl.hidden = false;
   installBtn.hidden = isStandalone();   // 이미 홈 화면 앱으로 열었으면 안 보임
+  if (saved.isNew) {
+    track('badge_new', { badge: info.badge });
+    setTimeout(() => toast(`🏅 새 칭호! 도감에 '${info.title}' 추가`, 3200), 700);
+  }
 }
+
+/* ---------- 쉼 기록 달력 + 칭호 도감 (로그인 없이 이 브라우저에만 저장) ---------- */
+// 칭호 순서 = 고르는 우선순위
+const BADGES = [
+  { id: 'hide', em: '🤫', name: '숨바꼭질 고수', hint: '아이 앞에서 두 번 숨죽이기', ok: (s, st) => st.hidden >= 2 },
+  { id: 'popular', em: '🙈', name: '인기 만점 엄빠', hint: '아이에게 세 번 들키기', ok: (s, st) => st.caught >= 3 },
+  { id: 'floor', em: '🔢', name: '바닥 감별사', hint: '바닥 타일 50개 세기', ok: (s, st) => st.tiles >= 50 },
+  { id: 'tissue', em: '🧻', name: '휴지 천사', hint: '휴지 두 번 건네기', ok: (s, st) => st.tissueGiven >= 2 },
+  { id: 'knock', em: '✊', name: '노크 장인', hint: '노크 세 번 하기', ok: (s, st) => st.knocks >= 3 },
+  { id: 'pro', em: '🛁', name: '프로 화캉서', hint: '5분 넘게 쉬기', ok: (s) => s >= 300 },
+  { id: 'quick', em: '⚡', name: '번개 화캉스', hint: '1분 안에 나오기', ok: (s) => s < 60 },
+  { id: 'calm', em: '😌', name: '평화로운 휴가객', hint: '1~5분 조용히 쉬기', ok: () => true },
+];
+const badgeOf = (id) => BADGES.find((b) => b.id === id) || BADGES[BADGES.length - 1];
+const badgeName = (b) => (b.id === 'popular' && app.role ? `인기 만점 ${roleWord()}` : b.name);
+function pickBadge(secs, st) { return BADGES.find((b) => b.ok(secs, st)).id; }
+
+const LOG_KEY = 'hwacance.log';   // { days: { 'YYYY-MM-DD': [횟수, 초] }, badges: { id: 횟수 } }
+function loadLog() {
+  const l = store.get(LOG_KEY);
+  return l && typeof l === 'object' && l.days && l.badges ? l : { days: {}, badges: {} };
+}
+const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function saveRecord(secs, badgeId) {
+  const log = loadLog(), k = dayKey(new Date());
+  const day = log.days[k] || [0, 0];
+  log.days[k] = [day[0] + 1, day[1] + Math.max(0, secs | 0)];
+  const isNew = !log.badges[badgeId];
+  log.badges[badgeId] = (log.badges[badgeId] || 0) + 1;
+  store.set(LOG_KEY, log);
+  return { isNew };
+}
+function fmtTotal(secs) {
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
+  return h ? `${h}시간 ${m}분` : m ? `${m}분` : `${secs}초`;
+}
+
+const recordsEl = $('#records');
+const rec = { y: 0, m: 0, newBadge: null };
+function renderRecords() {
+  const log = loadLog(), now = new Date();
+  const keys = Object.keys(log.days).sort();
+  // 요약: 이번 달 쉬어 간 날 · 지금까지 횟수 · 모두 쉰 시간
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  let total = 0, secs = 0;
+  for (const k of keys) { total += log.days[k][0]; secs += log.days[k][1]; }
+  const monthDays = keys.filter((k) => k.startsWith(ym)).length;
+  $('#recSum').innerHTML = `<div><strong>${monthDays}일</strong><span>이번 달 쉬어 간 날</span></div>`
+    + `<div><strong>${total}번</strong><span>지금까지</span></div>`
+    + `<div><strong>${fmtTotal(secs)}</strong><span>모두 쉰 시간</span></div>`;
+  // 달력
+  const first = new Date(rec.y, rec.m, 1), last = new Date(rec.y, rec.m + 1, 0).getDate();
+  $('#calMonth').textContent = `${rec.y}년 ${rec.m + 1}월`;
+  const firstKey = keys[0] ? keys[0].slice(0, 7) : ym, curKey = `${rec.y}-${String(rec.m + 1).padStart(2, '0')}`;
+  $('#calPrev').disabled = curKey <= firstKey;
+  $('#calNext').disabled = curKey >= ym;
+  let html = ['일', '월', '화', '수', '목', '금', '토'].map((w) => `<div class="wd">${w}</div>`).join('');
+  html += '<div></div>'.repeat(first.getDay());
+  const todayKey = dayKey(now);
+  for (let d = 1; d <= last; d++) {
+    const k = dayKey(new Date(rec.y, rec.m, d)), r = log.days[k];
+    const cls = ['d', r ? 'on' : '', k === todayKey ? 'today' : ''].join(' ');
+    const label = r ? `${rec.m + 1}월 ${d}일, ${r[0]}번 ${fmtTotal(r[1])} 쉼` : `${rec.m + 1}월 ${d}일`;
+    html += `<div class="${cls}" title="${label}" aria-label="${label}">${d}${r && r[0] > 1 ? `<b>${r[0]}</b>` : ''}</div>`;
+  }
+  $('#cal').innerHTML = html;
+  // 칭호 도감
+  const got = BADGES.filter((b) => log.badges[b.id]).length;
+  $('#badgeCount').textContent = `${got} / ${BADGES.length}`;
+  $('#badges').innerHTML = BADGES.map((b) => {
+    const n = log.badges[b.id] || 0;
+    const cls = ['bdg', n ? '' : 'locked', b.id === rec.newBadge ? 'new' : ''].join(' ');
+    return `<div class="${cls}"><i aria-hidden="true">${b.em}</i><span>${n ? badgeName(b) : '???'}</span><small>${n ? `${n}번 받음` : b.hint}</small></div>`;
+  }).join('');
+}
+function openRecords(from) {
+  const now = new Date();
+  rec.y = now.getFullYear(); rec.m = now.getMonth();
+  renderRecords();
+  recordsEl.hidden = false;
+  $('#recordsBtn').classList.remove('has-new');
+  track('records_open', { from });
+}
+function closeRecords() { recordsEl.hidden = true; rec.newBadge = null; }
+function shiftMonth(dir) { sfx.tap(); const d = new Date(rec.y, rec.m + dir, 1); rec.y = d.getFullYear(); rec.m = d.getMonth(); renderRecords(); }
+$('#calPrev').addEventListener('click', () => shiftMonth(-1));
+$('#calNext').addEventListener('click', () => shiftMonth(1));
+$('#recClose').addEventListener('click', () => { sfx.tap(); closeRecords(); });
+recordsEl.addEventListener('click', (e) => { if (e.target === recordsEl) closeRecords(); });
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !recordsEl.hidden) closeRecords(); });
+$('#recordsBtn').addEventListener('click', () => { sfx.tap(); openRecords('ending'); });
+const startRecBtn = $('#startRecBtn');
+startRecBtn.hidden = !Object.keys(loadLog().days).length;   // 기록이 있을 때만
+startRecBtn.addEventListener('click', () => { initAudio(); sfx.tap(); openRecords('start'); });
+app.log = loadLog;   // 디버그
+
+/* ---------- 옆 칸 초대 링크 (같은 초대 코드로 들어온 사람은 서버가 같은 방에 배정) ---------- */
+const INVITE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // 헷갈리는 글자(I·L·O·0·1) 뺌 — 서버 INVITE_RE와 같음
+const INVITE_RE = /^[A-HJKMNP-Z2-9]{6}$/;
+const newInviteCode = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => INVITE_ABC[b % INVITE_ABC.length]).join('');
+{
+  const q = new URLSearchParams(location.search), code = (q.get('room') || '').toUpperCase();
+  if (INVITE_RE.test(code)) {
+    app.invite = code;
+    app.invited = true;
+    $('#inviteNote').hidden = false;
+    track('invite_open');
+  }
+  if (q.has('room')) {   // 주소창에서는 지워 둠(다시 공유할 때 남의 방 코드가 섞이지 않게). 기억은 app.invite에
+    q.delete('room');
+    const rest = q.toString();
+    try { history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash); } catch (e) {}
+  }
+}
+async function shareInvite(from) {
+  sfx.tap();
+  if (!app.invite) app.invite = newInviteCode();
+  const q = new URLSearchParams();
+  q.set('room', app.invite);
+  const srv = new URLSearchParams(location.search).get('server');
+  if (srv) q.set('server', srv);   // 로컬 시험용
+  const url = `${location.origin}${location.pathname}?${q}`;
+  const after = from === 'ending' ? "'한 번 더 쉬기'를 누르면 같은 화장실로 가요" : '들어가면 같은 화장실에서 만나요';
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: '화캉스', text: '옆 칸 비워 둘게요. 잠깐 같이 쉬어요 🚽', url });
+      track('invite_send', { from, way: 'share' });
+      toast(after, 3200);
+      return;
+    } catch (e) { if (e && e.name === 'AbortError') return; }   // 공유 창을 닫음
+  }
+  if (await copyText(url)) {
+    track('invite_send', { from, way: 'copy' });
+    toast(`초대 링크를 복사했어요. 카톡에 붙여 넣어 보내 주세요 · ${after}`, 4200);
+  } else {
+    track('invite_send', { from, way: 'manual' });
+    window.prompt('이 주소를 복사해서 보내 주세요', url);   // 복사도 막힌 곳(일부 앱 안 브라우저)
+  }
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+  try {   // 예전 방식 (카톡 등 앱 안 브라우저에서 clipboard가 막힐 때)
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch (e) { return false; }
+}
+$('#inviteBtn').addEventListener('click', () => { initAudio(); shareInvite('start'); });
+$('#inviteBtn2').addEventListener('click', () => shareInvite('ending'));
 
 // 이미지 저장: claude.ai 안에서는 downloads 기능, 그 밖에서는 일반 내려받기
 let downloadsP = null;
